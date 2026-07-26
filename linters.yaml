@@ -1,0 +1,21 @@
+# linters.yaml -- gate opcional de linters externos deterministas (KDD Nivel 2, ver
+# knowledge/validacion.md). Corre con:
+#   python <ccdd-gate>/runners/linter_gate.py linters.yaml .
+# Exit: 0 limpio, 1 findings, 2 config/entorno invalido (version instalada != pin, o
+# clippy ausente si required:true). Sin LLM.
+#
+# `version` es el pin exacto de `cargo clippy --version` (solo la parte numerica, ej.
+# "0.1.96"). Version instalada != pin => exit 2 (entorno invalido, no PASS silencioso).
+#
+# required: false porque este gate es OPCIONAL (KDD Nivel 2, no bloquea Nivel 1): sin
+# clippy instalado, el check se salta con INFO en stderr en vez de romper el pipeline.
+
+- tool: clippy
+  version: "0.1.96"
+  files: "src/**/*.rs"
+  required: false
+  args:
+    - --all-targets
+    - --
+    - -D
+    - warnings
