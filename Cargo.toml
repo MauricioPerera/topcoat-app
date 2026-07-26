@@ -6,3 +6,10 @@ edition = "2024"
 [dependencies]
 topcoat = { path = "../topcoat/crates/topcoat" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+
+# `knowledge/contracts/format-greeting.md` declara `forbids: ['unsafe']`. Sin esto
+# la prohibicion era decorativa: nada la impedia (lo detecto `audit_forbids.py` con
+# FORBID_UNSAFE_UNENFORCED). Declarado aca, rustc la impone sobre el crate entero,
+# no sobre un archivo. Mismo criterio que Topcoat, que lo pone en su workspace.
+[lints.rust]
+unsafe_code = "deny"
