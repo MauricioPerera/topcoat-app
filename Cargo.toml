@@ -13,3 +13,7 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 # no sobre un archivo. Mismo criterio que Topcoat, que lo pone en su workspace.
 [lints.rust]
 unsafe_code = "deny"
+
+[[test]]
+name = "format_greeting"
+path = "tests_rs/format_greeting.rs"

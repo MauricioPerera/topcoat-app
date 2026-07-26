@@ -15,7 +15,7 @@ budget:
   nesting_max: 2
   lines_max: 15
   params_max: 1
-tests: "tests/format_greeting.rs"
+tests: "tests_rs/format_greeting.rs"
 tests_sha256: "050bdc1a83554bca71c7a703212644a268a1eea4bf6a1b9cf9d7a23f04ad401b"
 touch_only: ['src/greeting.rs']
 deps_allowed: []
@@ -64,7 +64,7 @@ pub fn format_greeting(name: &str) -> String
 - DON'T: agregar dependencias nuevas al `Cargo.toml`.
 
 ## Tests
-Los tests estan en `tests/format_greeting.rs` -- son el oraculo congelado,
+Los tests estan en `tests_rs/format_greeting.rs` -- son el oraculo congelado,
 sellado por `tests_sha256`. Se escribieron ANTES de delegar la implementacion.
 
 ## Constraints
