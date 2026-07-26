@@ -1,0 +1,8 @@
+[package]
+name = "topcoat-app"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+topcoat = { path = "../topcoat/crates/topcoat" }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
