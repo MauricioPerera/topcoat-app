@@ -3,8 +3,13 @@
 ## Sobre este proyecto
 
 App minima que consume [Topcoat](https://github.com/tokio-rs/topcoat) (framework Rust) como
-dependencia de path (`../topcoat/crates/topcoat`) -- **sin modificar el framework**. Sirve como
+dependencia git con `rev` fijo -- **sin modificar el framework**, que es de terceros. Sirve como
 banco de pruebas real de KDD/CCDD aplicado a Rust:
+
+```sh
+cargo run    # sirve en http://127.0.0.1:3000 (PORT=8080 para cambiarlo)
+curl http://127.0.0.1:3000/greet/ana     # -> <h1>Hello, Ana!</h1>
+```
 
 - `src/main.rs`: pagina `/greet/{name}` (`#[page]`/`#[path_param]`/`view!` de Topcoat).
 - `src/greeting.rs`: `format_greeting`, la logica pura detras de esa pagina -- implementada por

@@ -4,7 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-topcoat = { path = "../topcoat/crates/topcoat" }
+# Topcoat no esta publicado en crates.io, asi que se consume por git. El rev queda
+# FIJO a proposito: este proyecto es un ejemplo reproducible, y seguir la rama haria
+# que compilara distinto segun el dia. Para desarrollar contra un clon local, usa un
+# override en .cargo/config.toml (paths = [...]) en vez de editar esta linea.
+topcoat = { git = "https://github.com/tokio-rs/topcoat", rev = "ca0903338ea00ba1bd7495525ac7c687cd4971b7" }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 # `knowledge/contracts/format-greeting.md` declara `forbids: ['unsafe']`. Sin esto
