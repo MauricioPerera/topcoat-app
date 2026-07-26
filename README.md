@@ -1,5 +1,36 @@
 # Topcoat App
 
+## Sobre este proyecto
+
+App minima que consume [Topcoat](https://github.com/tokio-rs/topcoat) (framework Rust) como
+dependencia de path (`../topcoat/crates/topcoat`) -- **sin modificar el framework**. Sirve como
+banco de pruebas real de KDD/CCDD aplicado a Rust:
+
+- `src/main.rs`: pagina `/greet/{name}` (`#[page]`/`#[path_param]`/`view!` de Topcoat).
+- `src/greeting.rs`: `format_greeting`, la logica pura detras de esa pagina -- implementada por
+  un subagente que solo vio el contrato (`knowledge/contracts/format-greeting.md`), no la
+  referencia, y verificada de forma independiente: perimetro (`validate_perimeter.py`), oraculo
+  congelado (`tests/format_greeting.rs`, sellado por `tests_sha256`), firma y complejidad
+  (parser tree-sitter nativo para Rust, no aridad generica), clippy (`linters.yaml`), y
+  `scan_lint_suppressions` (ningun `#[allow(clippy::...)]` agregado para esquivar un lint).
+- Probado de punta a punta contra el servidor real (`cargo run` + `curl`), no solo con tests
+  unitarios.
+
+**Costo real de KDD+Rust, medido (no estimado):** el gate en si (firma + complejidad via
+tree-sitter) es sub-milisegundo, igual que Python -- el parser cambia, el costo no. El unico
+costo real es que Rust se compila: `clippy` con cache tibia agrega ~16x sobre un equivalente
+Python (`ruff`), y en frio (`cargo clean`, checkout limpio de CI) el costo sube a ~2800x
+(~59s vs ~21ms) -- del orden del minuto, no del milisegundo. Detalle completo, reproducible con
+`python <ccdd-gate>/runners/linter_gate.py linters.yaml .` y con
+[`benchmarks/bench_rust_backend.py`](https://github.com/MauricioPerera/ccdd-gate/blob/main/benchmarks/bench_rust_backend.py)
+de `ccdd-gate`, en la [sección 4 de su `BENCHMARKS.md`](https://github.com/MauricioPerera/ccdd-gate/blob/main/BENCHMARKS.md#4-costo-de-rust-vs-python-en-el-gate-reproducible).
+
+El resto de este README (abajo) es la documentacion generica de la plantilla KDD instanciada
+aca -- no duplicada, ver [`knowledge/validacion.md`](knowledge/validacion.md) para el detalle
+normativo del gate multi-lenguaje.
+
+---
+
 [![validate-contracts](https://github.com/MauricioPerera/KDD/actions/workflows/validate.yml/badge.svg)](https://github.com/MauricioPerera/KDD/actions/workflows/validate.yml)
 
 <a href="https://www.producthunt.com/products/kdd-knowledge-driven-development?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-kdd" target="_blank" rel="noopener noreferrer"><picture><source media="(prefers-color-scheme: dark)" srcset="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1198446&theme=dark&t=1784571286941"><img alt="KDD - Govern AI agents with deterministic gates. No LLM judging. | Product Hunt" width="250" height="54" src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1198446&theme=light&t=1784571617560"></picture></a>
