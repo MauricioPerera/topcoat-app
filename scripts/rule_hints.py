@@ -57,6 +57,14 @@ HINTS = {
         "El archivo de tests SI esta cubierto por 'touch_only', asi que el implementador "
         "podria editar su propio oraculo. Quitalo de touch_only: quien implementa nunca "
         "define el exito (Capa 0 de la metodologia).",
+    'FM_BUDGET_KEY':
+        "Una subclave de 'budget' no es de las que el gate de Nivel 2 LEE, asi que ese tope "
+        "no se aplicaria: el gate cae a su config firmada y el budget queda decorativo. Usa "
+        "exactamente 'cyclomatic_max', 'nesting_max', 'lines_max' o 'params_max' (el mensaje "
+        "del error nombra el reemplazo si era un alias historico).",
+    'FM_BUDGET_VALUE':
+        "Una subclave de 'budget' no tiene un entero positivo. Un tope solo es comparable si "
+        "es un numero: escribi 'cyclomatic_max: 8', sin comillas ni texto.",
 
     # -- validate_okf.py: estructura de los nodos de conocimiento ---------------
     'FM_KEY':
@@ -262,6 +270,26 @@ HINTS = {
     'WEAK_TARGET_UNREFERENCED':
         "Los tests no referencian al target del contrato: probablemente no lo estan ejercitando. "
         "Importalo y llamalo, o corrige el 'target'.",
+
+    'SECRETS_NO_FILES_SCANNED':
+        "El escaner de secretos no miro NI UN archivo en ese directorio: tiene archivos, pero "
+        "ninguno con una extension de DEFAULT_EXTENSIONS. No es que no haya secretos, es que "
+        "no se busco. Pasa la extension de tu lenguaje al script, o apunta el gate al "
+        "directorio correcto.",
+
+    # -- audit_forbids.py: forbids declarado vs realmente impedido --------------
+    'FORBID_UNVERIFIED':
+        "Esa capacidad de 'forbids' no tiene verificador mecanico para el lenguaje del target, "
+        "asi que sigue siendo declarativa. No es un error: es el auditor diciendote que parte "
+        "de tu 'forbids' es garantia y que parte es intencion.",
+    'FORBID_UNSAFE_PRESENT':
+        "El contrato declara 'forbids: unsafe' pero el target USA unsafe y el crate no lo "
+        "deniega. Saca el unsafe, o si el proyecto lo necesita, quita la prohibicion del "
+        "contrato: declarar algo que no se cumple es peor que no declararlo.",
+    'FORBID_UNSAFE_UNENFORCED':
+        "Declaras 'forbids: unsafe' pero nada lo impide a nivel compilador: hoy el target no lo "
+        "usa, y manana si. Agrega 'unsafe_code = \"deny\"' bajo [lints.rust] del Cargo.toml, o "
+        "'#![forbid(unsafe_code)]' en la raiz del crate: eso cubre el crate entero, no un archivo.",
 
     # -- validate_commit_message.py: convencion de mensajes ---------------------
     'CONFIG_MISSING':

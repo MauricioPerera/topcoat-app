@@ -6,6 +6,107 @@ All notable changes to the KDD Template are documented here.
 
 _Sin cambios pendientes._
 
+## v1.12.0 — 2026-07-26
+
+**Tres campos del contrato que se declaraban y no se verificaban.** Esta release sale de
+instanciar la plantilla en un proyecto Rust real y encontrar, tirando del mismo hilo tres veces,
+que el `budget`, el `forbids` y el escaneo de secretos **decian** cubrir algo que no cubrian —
+y que en los tres casos el fallo era el mismo: **verde silencioso**, no un error visible. Ninguno
+era detectable sin leer el codigo del gate. El tema comun queda escrito porque es la leccion, no
+la anecdota: un gate que no puede reportar su propia ausencia de cobertura no es un gate, es una
+sensacion de cobertura.
+
+**El gate de secretos era un no-op completo en proyectos no-Python.** Tercer caso de la misma
+clase (despues del `budget` y del `forbids`), y el mas grave porque es **seguridad y corre en
+CI**: `scan_secrets.py` escaneaba solo `('.py','.js','.ts','.md','.json')`, asi que en un
+proyecto Rust/Go/Java/C# **miraba CERO archivos y salia 0**. Verde, sin haber leido nada.
+
+- **Demostrado, no supuesto**: la MISMA clave `AKIAIOSFODNN7EXAMPLE` en un `.py` daba
+  `ERROR [AWS_KEY]` + exit 1; en un `.rs`, exit 0 silencioso.
+- **El oraculo congelado certificaba el agujero.** `test_custom_extensions` asertaba literalmente
+  que un `.rs` con una credencial devolvia `[]`. Leccion sobre oraculos: congelan el
+  comportamiento que TENIAS, incluido el que esta mal — `audit_seals` detecta seals debiles, no
+  seals equivocados.
+- `DEFAULT_EXTENSIONS` ahora es una constante introspectable que cubre los lenguajes con backend
+  en el gate (`.rs`, `.go`, `.java`, `.cs`, `.php`, `.rb`, `.kt`, `.c`/`.cpp`, `.swift`, `.ts`,
+  `.py`...) mas config y scripts donde las credenciales viven igual de seguido (`.toml`,
+  `.yaml`, `.env`, `.sh`, `.tf`, `.sql`...).
+- **Ampliar la lista no alcanzaba**: la proxima extension ausente reproduce el bug en silencio.
+  Nuevo `SECRETS_NO_FILES_SCANNED` (WARNING): si un directorio TIENE archivos y ninguno matchea,
+  el gate lo dice. No rompe el build — avisa que no miro nada, no que haya un secreto. `main`
+  pasa a respetar el `level` del finding y solo cuenta ERRORs para el exit code.
+- Regresion cubierta en el oraculo: un secreto identico plantado en 14 extensiones
+  (`.rs`, `.go`, `.java`, `.cs`, `.rb`, `.kt`, `.swift`, `.c`, `.cpp`, `.php`, `.toml`, `.yaml`,
+  `.env`, `.sh`) debe detectarse en todas. Suite 692 -> 696; `tests/test_scan_secrets.py`
+  re-sellado (cambio legitimo del oraculo, visible en el diff del sello).
+- `rule_hints` gana la receta de `SECRETS_NO_FILES_SCANNED`; conteo **106 -> 107** rule-ids.
+
+**El `forbids` que declarabas tampoco estaba impedido** — segundo campo del contrato que resulta
+decorativo, hallado tirando del mismo hilo que el `budget`. `tc_lint` solo avisa si `forbids`
+esta vacio; **nadie verificaba su contenido**. Un contrato podia declarar `forbids: ['unsafe']`
+sobre un proyecto Rust que permite `unsafe` sin que ningun gate lo notara. Hallazgo real: el
+propio proyecto de prueba de esta plantilla lo declaraba sin imponerlo.
+
+**Nuevo auditor `scripts/audit_forbids.py`** (advisory opt-in, contrato `forbids-audit`)
+- Compara el `forbids` DECLARADO contra lo que esta efectivamente impedido. **Un solo
+  verificador: `unsafe` en Rust**, elegido porque es el unico donde la prohibicion es
+  comprobable de verdad — rustc la impone sobre el **crate entero**, no sobre un archivo. Acepta
+  las tres vias equivalentes: `#![forbid|deny(unsafe_code)]` en la raiz del crate,
+  `unsafe_code = "deny"|"forbid"` bajo `[lints.rust]`, o herencia del workspace
+  (`[lints] workspace = true` + `[workspace.lints.rust]`).
+- Con la denegacion presente **no reporta nada aunque el target use `unsafe`**: rustc rechaza la
+  compilacion, o sea que el fallo de build ES el enforcement.
+- 3 reglas: `FORBID_UNSAFE_PRESENT` (dura: declarada y violada, sin denegacion),
+  `FORBID_UNSAFE_UNENFORCED` (declarada pero nada la impone a nivel compilador — hoy el target
+  no la viola, manana si) y `FORBID_UNVERIFIED`.
+- **`FORBID_UNVERIFIED` es el punto, no un relleno**: `network` / `subprocess` / `llm` siguen
+  siendo declarativos y el auditor **lo dice en vez de callar**, asi que un `forbids` en limpio
+  deja de significar "todo verificado" y pasa a significar "esto verificado, esto todavia no".
+  Nunca cambia el exit code, ni con `--strict`: es una limitacion del auditor, no un
+  incumplimiento del contrato.
+- Sin `--strict` SIEMPRE exit 0; con `--strict`, exit 1 solo por reglas duras. **NO es un gate de
+  Nivel 1**: el conteo no cambia (11 gates, preflight 12/12) y deliberadamente NO entra en
+  `GATE_SPECS` — eso rompería el oraculo congelado del preflight, y promoverlo seria su propio
+  contrato con ambos oraculos re-sellados (misma politica que fijo `audit_seals` en v1.10.0).
+- No usa `tomllib` a proposito: fijaria un piso de Python 3.11 en una plantilla que se
+  distribuye a terceros. Parser de secciones minimo, mismo criterio que el mini-YAML de
+  `validate_contracts`.
+- Oraculo congelado `tests/test_audit_forbids.py` (31 tests, sellado, fixtures solo en tmpdir).
+  Suite 661 -> 692. `audit_seals` sobre el oraculo nuevo: 0 findings.
+- `rule_hints` gana las 3 recetas y `audit_forbids.py` entra en `_EMITTERS` del test de
+  cobertura bidireccional; el conteo pasa de **103 a 106** rule-ids en los 5 lugares que lo
+  citan. Ese cambio toca `tests/test_rule_hints.py`, oraculo del contrato `rule-hints`, asi que
+  su `tests_sha256` se **re-sella** — el gate lo detecto (`FM_TESTS_FROZEN`) y el diff del sello
+  deja el cambio visible en review, que es exactamente para lo que existe.
+
+**El tope que declarabas no era el que se aplicaba.** El gate de Nivel 2 (`GLOBAL_MAX` de
+`tc_lint.py`) lee `cyclomatic_max` / `nesting_max` / `lines_max` / `params_max`. La plantilla
+documentaba, y **los 33 contratos de este repo usaban**, `max_cyclomatic_complexity` /
+`max_nesting_depth` — nombres que el gate **nunca leyo**. `validate_contracts.py` solo
+verificaba que `budget` *existiera*, no los nombres de sus subclaves, asi que el tope declarado
+se descartaba, el gate caia a su config firmada y nadie lo notaba.
+
+**Subclaves de `budget` verificadas por nombre** (`FM_BUDGET_KEY` / `FM_BUDGET_VALUE`)
+- **Evidencia del fallo, no sospecha**: un contrato con `max_params: 1` y una firma de **5
+  parametros** pasaba `lint_task_contract` con **cero errores de budget**. Con el nombre
+  canonico (`params_max: 3`) el mismo gate si reporta el exceso. La promesa central de CCDD
+  —umbrales deterministas— no se cumplia, y no era detectable sin leer el codigo del gate.
+- `validate_contracts.py` gana `BUDGET_KEYS` (las canonicas) y `BUDGET_LEGACY_ALIASES`
+  (historica -> canonica, para que el error diga **que** renombrar, no solo que esta mal), mas
+  el helper `_is_positive_int` (el parser mini-YAML no convierte tipos: `5` llega como `'5'`;
+  rechaza bool, cero, negativos y no-numericos).
+- **Los 33 contratos + la plantilla** migrados a los nombres canonicos (rename acotado a claves
+  indentadas del frontmatter, verificado que no toca prosa).
+- `glosario.md`: los nombres estaban mal y afirmaba que Nivel 1 "solo checkea que esten
+  presentes" — ya no es cierto para los NOMBRES (los VALORES siguen siendo informativos en
+  Nivel 1; los topes los enforce Nivel 2, sin cambios en la precedencia).
+- `rule_hints.py`: recetas de los dos rule-ids nuevos, y el conteo pasa de **101 a 103**
+  rule-ids en los 5 lugares que lo citaban (`.agents/AGENTS.md`, la skill local,
+  `rule-hints.md`, `glosario.md`, `README.md`).
+- **Trade-off aceptado**, mismo patron que `tests_sha256`: en proyectos ya instanciados desde la
+  plantilla, los contratos con los nombres viejos pasan a ERROR al actualizar el validador — el
+  mensaje de error nombra exactamente el reemplazo.
+
 ## v1.11.1 — 2026-07-26
 
 **Patch de documentacion**: sin cambios de codigo, ningun contrato ni oraculo tocado, ninguna
